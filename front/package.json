@@ -1,0 +1,43 @@
+{
+  "name": "front",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.13.3",
+    "@emotion/styled": "^11.13.0",
+    "@mui/icons-material": "^6.1.3",
+    "@mui/material": "^6.1.3",
+    "@pdf-lib/fontkit": "^1.1.1",
+    "@types/jspdf": "^2.0.0",
+    "@types/pdfmake": "^0.2.9",
+    "axios": "^1.7.7",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^2.5.2",
+    "jspdf-autotable": "^3.8.3",
+    "lodash": "^4.17.21",
+    "next": "14.2.15",
+    "pdf-lib": "^1.17.1",
+    "pdfmake": "^0.2.14",
+    "react": "^18.3.1",
+    "react-dom": "^18",
+    "react-router-dom": "^6.27.0",
+    "sweetalert2": "^11.14.2",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.15",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}
