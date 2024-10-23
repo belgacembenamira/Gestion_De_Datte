@@ -20,9 +20,7 @@ export class Commande {
   @Column({ nullable: true }) // Made nullable
   date: string;
 
-  @Column({ type: 'numeric', nullable: true }) // Change to 'numeric'
-  qty: number;
-  commandeService: any;
+  TypeDeDatteQuantity: TypeDeDatteQuantity[];
 
   @Column({ type: 'numeric', nullable: true })
   prix: number;

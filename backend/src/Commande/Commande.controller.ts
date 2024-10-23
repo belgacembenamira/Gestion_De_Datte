@@ -10,10 +10,10 @@ export class CommandeController {
   create(@Body() commande: Commande) {
     return this.commandeService.create(commande);
   }
-  @Post('createP')
-  createPersonnel(@Body() commande: Commande) {
-    return this.commandeService.createPersonnel(commande);
-  }
+  // @Post('createP')
+  // createPersonnel(@Body() commande: Commande) {
+  //   return this.commandeService.createPersonnel(commande);
+  // }
   @Delete(':id')
   async deleteCommande(@Param('id') id: number): Promise<void> {
     return this.commandeService.deleteById(id);

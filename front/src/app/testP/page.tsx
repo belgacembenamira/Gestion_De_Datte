@@ -138,8 +138,10 @@ const Page: React.FC = () => {
 
         // Title aligned to the right
         const title = "SODEA";
-        const titleXPosition = pageWidth - doc.getTextWidth(title) - 20;
-        doc.text(title, titleXPosition, 35);
+        // Set the X position with a margin of 20 from the left
+        const titleXPosition = 20; // Change this value if you want a different margin
+        doc.text(title, titleXPosition, 25); // Now this is aligned to the left
+
 
         // Invoice details
         doc.text(`Facture N°: ${invoiceNumber}`, 14, 50);

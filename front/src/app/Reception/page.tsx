@@ -15,7 +15,8 @@ import autoTable from "jspdf-autotable";
 interface Coffre {
     id: string;
     TypeCoffre: string;
-    PoidsCoffre: number; // Make sure this is a number for calculation
+    PoidsCoffre: number;
+    Cin: string; // Added CIN field
 }
 
 interface TypeDeDatte {
@@ -28,7 +29,8 @@ interface Entry {
     nbreCoffres: number;
     qtyBrut: number;
     typeCoffre: string;
-    qtyNet: number; // Add qtyNet directly to Entry
+    qtyNet: number;
+    typeDeDatte: string;
 }
 
 export default function Page() {
@@ -38,6 +40,7 @@ export default function Page() {
     const [poidsCoffre, setPoidsCoffre] = useState(0);
     const [transporteur, setTransporteur] = useState("");
     const [chauffeur, setChauffeur] = useState("");
+    const [chauffeurCIN, setChauffeurCIN] = useState(""); // New state for CIN
     const [version, setVersion] = useState("");
 
     // Fetch Coffres and Types de Datte data
@@ -59,7 +62,7 @@ export default function Page() {
 
     // Handle adding new entry
     const handleAddEntry = () => {
-        setEntries([...entries, { nbreCoffres: 0, qtyBrut: 0, typeCoffre: "", qtyNet: 0 }]);
+        setEntries([...entries, { nbreCoffres: 0, qtyBrut: 0, typeCoffre: "", qtyNet: 0, typeDeDatte: "" }]);
     };
 
     // Update poidsCoffre and calculate qtyNet when a new type of coffre is selected
@@ -99,6 +102,13 @@ export default function Page() {
         setEntries(updatedEntries);
     };
 
+    // Handle Type de Datte change
+    const handleTypeDeDatteChange = (index: number, typeDeDatte: string) => {
+        const updatedEntries = [...entries];
+        updatedEntries[index].typeDeDatte = typeDeDatte;
+        setEntries(updatedEntries);
+    };
+
     // Handle PDF Generation
     const handlePrintPDF = () => {
         const doc = new jsPDF();
@@ -118,15 +128,12 @@ export default function Page() {
         const versionText = `Numéro de Bon Livraison : ${version}`;
         const dateText = `Date : ${new Date().toLocaleDateString()}`;
 
-        // Position the versionText at the left (X = 15)
         doc.text(versionText, 15, 40);
-
-        // Position the dateText at the right (aligned with the right side of the page)
         const dateTextWidth = doc.getTextWidth(dateText);
-        doc.text(dateText, pageWidth - dateTextWidth - 15, 40); // Adjusted X position for right alignment
+        doc.text(dateText, pageWidth - dateTextWidth - 15, 40); // Right aligned date
 
         // Producer Info (left rectangle)
-        const producerRectY = 55; // Position Y for the Producer Info rectangle
+        const producerRectY = 55;
         doc.rect(15, producerRectY, 80, 50); // Rectangle for Producer Info
         doc.text(`Producteur : Taher Ajel`, 20, producerRectY + 10); // Adjusted Y margin
         doc.text(`CIN : 04853868`, 20, producerRectY + 20); // Added margin
@@ -139,20 +146,27 @@ export default function Page() {
         doc.text(`Livré à : SODEA`, 115, deliveryRectY + 10); // Adjusted Y margin
         doc.text(`Adresse : Route de Morneg km 02 `, 115, deliveryRectY + 20); // Split onto two lines
         doc.text(`Khelidia Ben Arous`, 115, deliveryRectY + 30); // Continued address
-        doc.text(`MF: 49647/J/P/M`, 115, deliveryRectY + 45); // MF after the address with adjusted margin
+        doc.text(`MF: 49647/J/P/M`, 115, deliveryRectY + 40); // MF after the address with adjusted margin
+        // doc.text(`Chauffeur CIN: ${chauffeurCIN}`, 115, deliveryRectY + 50); // New chauffeur CIN
 
         // Table Header and Body
-        const headers = [["Nbre de Caisses", "Qty Brut (Kg)", "Qty Net (Kg)"]];
+        const headers = [["Nbre de Caisses", "Type de Caisse", "Type de Datte", "Qty Brut (Kg)", "Qty Net (Kg)"]];
 
         // Calculating totals
         let totalBrut = 0;
         let totalNet = 0;
+        let totalCaisse = 0;
 
         const body = entries.map(entry => {
             totalBrut += entry.qtyBrut;
             totalNet += entry.qtyNet;
+            totalCaisse += entry.nbreCoffres;
+            const selectedCoffre = coffres.find(coffre => coffre.id === entry.typeCoffre);
+            const selectedTypeDeDatte = typesDeDatte.find(type => type.id === Number(entry.typeDeDatte));
             return [
                 entry.nbreCoffres,
+                selectedCoffre?.TypeCoffre || "",
+                selectedTypeDeDatte?.name || "",
                 entry.qtyBrut,
                 entry.qtyNet,
             ];
@@ -172,97 +186,82 @@ export default function Page() {
                 const currentY = data.cursor.y + 10; // Position just below the table
 
                 // Display Total Brut and Total Net
-                // doc.text(`Total Brut (Kg) : ${totalBrut.toFixed(2)}`, 15, currentY);
-                // doc.text(`Total Net (Kg) : ${totalNet.toFixed(2)}`, 15, currentY + 10); // Add 10 for space after total brut
-
+                doc.text(`Total Caisses: ${totalCaisse}`, 15, currentY);
+                doc.text(`Total Qty Brut (Kg): ${totalBrut}`, 15, currentY + 10);
+                doc.text(`Total Qty Net (Kg): ${totalNet}`, 15, currentY + 18);
                 // Transport Info
                 const transportRectY = currentY + 20; // Add margin after totals
                 doc.rect(15, transportRectY, 170, 50); // Adjusted for better spacing
-                doc.text(`Transporteur :`, 20, transportRectY + 10); // Added margin within the rectangle
+                doc.text(`Transporteur : `, 20, transportRectY + 10); // Added margin within the rectangle
                 doc.text(`Camion : ${transporteur}`, 20, transportRectY + 20);
                 doc.text(`Chauffeur : ${chauffeur}`, 20, transportRectY + 30);
+                doc.text(`Chauffeur CIN : ${chauffeurCIN}`, 20, transportRectY + 40); // Added chauffeur CIN
 
                 // Footer
-                const footerY = transportRectY + 60; // Add margin after transport info
-                doc.text("Signature Ferme", 20, footerY);
-                doc.text("Signature & Cache SODEA", 150, footerY);
+                const footerY = transportRectY + 70; // Add margin after transport info
+
             }
         });
 
-        // Save the PDF
-        doc.save("bon_de_livraison.pdf");
+        // Save PDF
+        doc.save(`BonLivraison_${version}.pdf`);
     };
 
-
-
-
-
-
-
     return (
-        <Box
-            p={4}
-            sx={{
-                backgroundColor: "#f0f0f0",
-                borderRadius: "10px",
-                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
-                maxWidth: 800,
-                margin: "0 auto",
-            }}
-        >
-            <Typography variant="h4" gutterBottom align="center">
-                Bon de Livraison
-            </Typography>
+        <Box p={3}>
+            <Typography variant="h4" gutterBottom>Bon de Livraison</Typography>
 
             <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
                     <TextField
                         label="Transporteur"
-                        variant="outlined"
-                        fullWidth
                         value={transporteur}
                         onChange={(e) => setTransporteur(e.target.value)}
+                        fullWidth
+                        variant="outlined"
                     />
                 </Grid>
+
                 <Grid item xs={12} sm={6}>
                     <TextField
                         label="Chauffeur"
-                        variant="outlined"
-                        fullWidth
                         value={chauffeur}
                         onChange={(e) => setChauffeur(e.target.value)}
+                        fullWidth
+                        variant="outlined"
                     />
                 </Grid>
-                {/* Dynamic Entry Fields */}
+
+                <Grid item xs={12} sm={6}>
+                    <TextField
+                        label="Chauffeur CIN" // Added field for Chauffeur's CIN
+                        value={chauffeurCIN}
+                        onChange={(e) => setChauffeurCIN(e.target.value)}
+                        fullWidth
+                        variant="outlined"
+                    />
+                </Grid>
+
+                {/* Entries Form */}
                 {entries.map((entry, index) => (
-                    <React.Fragment key={index}>
-                        <Grid item xs={12} sm={6}>
+                    <Grid container spacing={2} key={index}>
+                        <Grid item xs={12} sm={2}>
                             <TextField
-                                label="Nombre de Coffres"
-                                variant="outlined"
+                                label="Nbre de Caisses"
                                 type="number"
-                                fullWidth
                                 value={entry.nbreCoffres}
                                 onChange={(e) => handleNbreCoffresChange(index, Number(e.target.value))}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                label="Qty Brut"
-                                variant="outlined"
-                                type="number"
                                 fullWidth
-                                value={entry.qtyBrut}
-                                onChange={(e) => handleQtyBrutChange(index, Number(e.target.value))}
                             />
                         </Grid>
-                        <Grid item xs={12} sm={6}>
+
+                        <Grid item xs={12} sm={2}>
                             <TextField
-                                select
                                 label="Type de Coffre"
-                                fullWidth
+                                select
                                 value={entry.typeCoffre}
                                 onChange={(e) => handleCoffreChange(index, e.target.value)}
+                                fullWidth
                             >
                                 {coffres.map((coffre) => (
                                     <MenuItem key={coffre.id} value={coffre.id}>
@@ -271,27 +270,55 @@ export default function Page() {
                                 ))}
                             </TextField>
                         </Grid>
-                        <Grid item xs={12} sm={6}>
+
+                        <Grid item xs={12} sm={2}>
                             <TextField
-                                label="Qty Net"
-                                variant="outlined"
-                                type="number"
+                                label="Type de Datte"
+                                select
+                                value={entry.typeDeDatte}
+                                onChange={(e) => handleTypeDeDatteChange(index, e.target.value)}
                                 fullWidth
-                                value={entry.qtyNet} // Display the calculated qtyNet
-                                disabled // Disable editing, as it's auto-calculated
+                            >
+                                {typesDeDatte.map((type) => (
+                                    <MenuItem key={type.id} value={type.id}>
+                                        {type.name}
+                                    </MenuItem>
+                                ))}
+                            </TextField>
+                        </Grid>
+
+                        <Grid item xs={12} sm={2}>
+                            <TextField
+                                label="Qty Brut (Kg)"
+                                type="number"
+                                value={entry.qtyBrut}
+                                onChange={(e) => handleQtyBrutChange(index, Number(e.target.value))}
+                                fullWidth
                             />
                         </Grid>
-                    </React.Fragment>
+
+                        <Grid item xs={12} sm={2}>
+                            <TextField
+                                label="Qty Net (Kg)"
+                                type="number"
+                                value={entry.qtyNet}
+                                disabled
+                                fullWidth
+                            />
+                        </Grid>
+                    </Grid>
                 ))}
+
+                <Grid item xs={12}>
+                    <Button variant="outlined" onClick={handleAddEntry}>Ajouter une entrée</Button>
+                </Grid>
+
+                <Grid item xs={12}>
+                    <Button variant="contained" color="primary" onClick={handlePrintPDF}>
+                        Imprimer Bon de Livraison
+                    </Button>
+                </Grid>
             </Grid>
-
-            <Button variant="contained" color="primary" onClick={handleAddEntry} sx={{ mt: 3 }}>
-                Ajouter un Entrée
-            </Button>
-
-            <Button variant="contained" color="secondary" onClick={handlePrintPDF} sx={{ mt: 3, ml: 2 }}>
-                Imprimer PDF
-            </Button>
         </Box>
     );
 }

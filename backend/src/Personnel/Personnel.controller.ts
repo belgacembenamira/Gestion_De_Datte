@@ -27,30 +27,20 @@ export class PersonnelController {
 
   // Retrieve a personnel by ID
   @Get(':id')
-  findOne(@Param('id', new ParseUUIDPipe({ version: '7' })) id: number) {
-    if (!this.isUUID(id)) {
-      throw new BadRequestException('Invalid UUID');
-    }
+  findOne(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string) {
     return this.personnelService.findOne(id);
-  }
-
-  private isUUID(id: number): boolean {
-    // Regex to check if the ID is a valid UUID
-    const uuidRegex =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(id.toString());
   }
 
   // Create a new personnel
   @Post('/create')
-  create(@Body() personnel: Partial<Personnel>): Promise<Personnel> {
+  create(@Body() personnel: Personnel): Promise<Personnel> {
     return this.personnelService.create(personnel);
   }
 
   // Update a personnel by ID
   @Patch(':id')
   update(
-    @Param('id') id: number,
+    @Param('id') id: string,
     @Body() personnel: Partial<Personnel>,
   ): Promise<Personnel> {
     return this.personnelService.update(id, personnel);
@@ -58,7 +48,7 @@ export class PersonnelController {
 
   // Delete a personnel by ID
   @Delete(':id')
-  remove(@Param('id') id: number): Promise<void> {
+  remove(@Param('id') id: string): Promise<void> {
     return this.personnelService.remove(id);
   }
 
@@ -68,20 +58,12 @@ export class PersonnelController {
     return this.personnelService.findByName(name);
   }
 
-  // Get all orders for a specific personnel
-  // @Get(':id/commandes')
-  // findAllCommandesByPersonnel(@Param('id') id :number): Promise<Commande[]> {
-  //   return this.personnelService.findAllCommandesByPersonnel(id);
-  // }
-  @Get('/with-commandes-and-coffres')
-  async findAllWithCommandesAndCoffres() {
-    return this.personnelService.findAllWithCommandesAndCoffres();
-  }
-  @Get('with-commandes')
+
+  // Get all personnel with commandes
+  @Get('/with-commandes')
   async getAllPersonnelWithCommandes(@Res() res) {
     try {
-      const personnelWithCommandes =
-        await this.personnelService.findAllPersonnelWithCommandes();
+      const personnelWithCommandes = await this.personnelService.findAllWithCommandes();
       return res.status(HttpStatus.OK).json(personnelWithCommandes);
     } catch (error) {
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({

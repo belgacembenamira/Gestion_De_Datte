@@ -77,12 +77,12 @@ export class ClientsService {
       commandes: client.commandes.map((commande) => ({
         id: commande.id,
         date: commande.date,
-        qty: commande.qty,
         prix: commande.prix,
         typeDeDatteQuantities: commande.typeDeDatteQuantities.map(
           (typeDeDatteQuantity) => ({
             id: typeDeDatteQuantity.id,
-            quantity: typeDeDatteQuantity.quantity,
+            quantitynet: typeDeDatteQuantity.quantitynet,
+            quantitybrut: typeDeDatteQuantity.quantitybrut,
             typeDeDatteName: typeDeDatteQuantity.typeDeDatteName,
             numberDeCoffre: typeDeDatteQuantity.numberDeCoffre,
           }),

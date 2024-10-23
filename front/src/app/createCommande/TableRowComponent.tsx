@@ -1,5 +1,4 @@
 "use client";
-
 import React, { memo } from 'react';
 import {
     TableCell,
@@ -13,9 +12,11 @@ import { generateInvoicePDF } from '../createCommande/generatePDF';
 
 interface TypeDeDatteQuantity {
     id: number;
-    quantity: string; // Keep as string for input but convert to number during processing
-    numberDeCoffre: string; // Keep as string for input but convert to number during processing
+    quantitynet: string;
+    quantitybrut: string;
+    numberDeCoffre: string;
     typeDeDatteName: string;
+    prixUnitaireDeDatte?: string; // Ensure unit price is included
 }
 
 interface Client {
@@ -30,13 +31,13 @@ interface Coffre {
 }
 
 interface Commande {
-    id: string;
+    id: number;
     date: string;
     qty: number;
     prix: number;
     typeDeDatteQuantities: TypeDeDatteQuantity[];
     client: Client;
-    coffres: Coffre[]; // Defined a more specific type for `coffres`
+    coffres: Coffre[];
 }
 
 interface TableRowComponentProps {
@@ -46,29 +47,10 @@ interface TableRowComponentProps {
 }
 
 const TableRowComponent: React.FC<TableRowComponentProps> = memo(({ commande, onEdit, onDelete }) => {
-    // Aggregate duplicate typeDeDatteQuantities
-    const aggregatedTypeDeDatteQuantities = commande.typeDeDatteQuantities.reduce(
-        (acc: Record<string, TypeDeDatteQuantity>, type) => {
-            const key = type.typeDeDatteName;
-
-            if (acc[key]) {
-                // Sum the quantities and number of boxes
-                acc[key].quantity = (parseInt(acc[key].quantity) + parseInt(type.quantity)).toString();
-                acc[key].numberDeCoffre = (parseInt(acc[key].numberDeCoffre) + parseInt(type.numberDeCoffre)).toString();
-            } else {
-                // Initialize a new entry
-                acc[key] = { ...type };
-            }
-
-            return acc;
-        },
-        {}
-    );
-
-    // Convert the aggregated object back to an array and ensure quantities are numbers
-    const uniqueTypeDeDatteQuantities = Object.values(aggregatedTypeDeDatteQuantities).map(type => ({
+    const uniqueTypeDeDatteQuantities = commande.typeDeDatteQuantities.map(type => ({
         ...type,
-        quantity: parseInt(type.quantity),
+        quantitynet: parseFloat(type.quantitynet),
+        quantitybrut: parseFloat(type.quantitybrut),
         numberDeCoffre: parseInt(type.numberDeCoffre),
     }));
 
@@ -85,17 +67,15 @@ const TableRowComponent: React.FC<TableRowComponentProps> = memo(({ commande, on
                 </Typography>
                 {uniqueTypeDeDatteQuantities.map((type) => (
                     <div key={type.id} style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-                        {/* Use a bullet point or an icon for each type */}
                         <Typography variant="body2" sx={{ marginRight: 1 }}>•</Typography>
                         <Typography variant="body2" sx={{ fontWeight: 500 }}>
                             {type.typeDeDatteName}
                         </Typography>
                         <Typography variant="body2" sx={{ marginLeft: 2, color: 'text.secondary' }}>
-                            (كمية: {type.quantity}, عدد الصناديق: {type.numberDeCoffre})
+                            (كمية صافية: {type.quantitynet.toFixed(3)}, كمية إجمالية: {type.quantitybrut.toFixed(3)}, عدد الصناديق: {type.numberDeCoffre})
                         </Typography>
                     </div>
                 ))}
-                {/* Display coffres information */}
                 <Typography variant="body2" sx={{ marginTop: 2, fontWeight: 'bold' }}>
                     أنواع الصناديق:
                 </Typography>
@@ -122,11 +102,11 @@ const TableRowComponent: React.FC<TableRowComponentProps> = memo(({ commande, on
                         onClick={() => {
                             generateInvoicePDF(
                                 commande.client?.name || "غير متوفر",
-                                uniqueTypeDeDatteQuantities, // Aggregated quantities
-                                commande.coffres, // Pass coffres
-                                commande.date, // Pass the order date
-                                commande.prix, // Pass the price per unit
-                                commande.id // Add the order ID
+                                uniqueTypeDeDatteQuantities,
+                                commande.coffres,
+                                commande.date,
+                                commande.prix,
+                                commande.id
                             );
                         }}
                     >

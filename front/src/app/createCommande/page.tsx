@@ -41,7 +41,8 @@ interface Coffre {
 }
 interface TypeDeDatteQuantity {
     id: number;
-    quantity: string;
+    quantitybrut: string;
+    quantitynet: string;
     numberDeCoffre: string; // Changed from number to string
     typeDeDatteName: string;
     prixUnitaireDeDatte: number; // Added this line
@@ -115,29 +116,30 @@ const Page: React.FC = () => {
     };
     const handleSubmit = async () => {
         const totalQty = commandeData.reduce((total, item) => {
-            const selectedCoffre = coffres.find(coffre => coffre.id === item.coffreId);
-            const poidsCoffre = selectedCoffre ? parseFloat(selectedCoffre.PoidsCoffre) : 0;
-            const qtyBrut = item.qty - (poidsCoffre * item.quantiteCoffre); // Calcul de la quantité brute
-            return total + qtyBrut;
+            const qtyBrut = item.qty; // Keep raw calculated value
+            return total + (qtyBrut > 0 ? qtyBrut : 0); // Ensure total only includes valid quantities
         }, 0);
 
-        const totalPrix = commandeData.reduce((total, item) => {
+        let newTotalPrix = commandeData.reduce((total, item) => {
             const selectedCoffre = coffres.find(coffre => coffre.id === item.coffreId);
             const selectedType = typesDeDatte.find(type => type.id === item.typeDeDatteId);
             const prixUnitaire = selectedType ? selectedType.prix : 0;
             const poidsCoffre = selectedCoffre ? parseFloat(selectedCoffre.PoidsCoffre) : 0;
-            const qtyBrut = item.qty - (poidsCoffre * item.quantiteCoffre); // Calcul de la quantité brute
-            return total + (qtyBrut * prixUnitaire);
+            const qtyBrut = item.qty - (poidsCoffre * item.quantiteCoffre); // Keep raw calculated value
+            return total + (qtyBrut > 0 ? (qtyBrut * prixUnitaire) : 0); // Only add valid quantities
         }, 0);
+
+        // Set the totalPrix state
+        setTotalPrix(newTotalPrix);
 
         let clientId;
 
         console.log('Starting order submission...');
         console.log('Total Quantity:', totalQty);
-        console.log('Total Price:', totalPrix);
+        console.log('Total Price:', newTotalPrix);
 
         try {
-            // Tentative de récupération de l'ID client
+            // Attempt to retrieve the client ID
             clientId = await fetchClientIdByName(clientName);
             console.log('Fetched client ID:', clientId);
 
@@ -151,27 +153,29 @@ const Page: React.FC = () => {
                 .map(data => {
                     const selectedType = typesDeDatte.find(type => type.id === data.typeDeDatteId);
                     const selectedCoffre = coffres.find(coffre => coffre.id === data.coffreId);
-                    const poidsCoffre = selectedCoffre ? parseFloat(selectedCoffre.PoidsCoffre) : 0;
-                    const qtyBrut = data.qty - (poidsCoffre * data.quantiteCoffre); // Calcul de la quantité brute
+                    const qtyBrut = data.qty; // Calculate raw quantity
                     return {
                         typeDeDatteName: selectedType?.name ?? 'Inconnu',
-                        quantity: qtyBrut, // Quantité brute
-                        date: new Date().toISOString(),
-                        prixUnitaireDeDatte: selectedType?.prix ?? 0, // Prix unitaire
-                        numberDeCoffre: data.quantiteCoffre ?? 0, // Nombre de coffres
+                        quantitybrut: qtyBrut, // Include brut quantity
+                        // Keep two decimal places
+                        quantitynet: (qtyBrut > 0 ? (qtyBrut - (selectedCoffre ? parseFloat(selectedCoffre.PoidsCoffre) * data.quantiteCoffre : 0)) : 0), // Calculate net quantity
+                        // Convert to string as per updated interface
+                        numberDeCoffre: data.quantiteCoffre.toString(),
+                        prixUnitaireDeDatte: selectedType?.prix ?? 0,
+                        date: new Date().toISOString().split('T')[0], // Corrected as per backend result
                     };
                 })
-                .filter(item => item.quantity > 0); // Inclure uniquement les éléments avec une quantité valide
+                .filter(item => item.quantitynet > 0); // Include only items with a valid net quantity
 
             console.log('Type de Datte Quantities:', typeDeDatteQuantities);
 
             const commandeDataToSend = {
                 date: new Date().toISOString().split('T')[0],
                 qty: totalQty,
-                prix: totalPrix,
+                prix: newTotalPrix, // Use newTotalPrix here
                 client: { id: clientId },
                 coffres: commandeData.map(data => ({ id: data.coffreId, quantity: data.quantiteCoffre })),
-                typeDeDatteQuantities,
+                TypeDeDatteQuantity: typeDeDatteQuantities, // Adjusted to use singular
             };
 
             console.log('Final Commande Data to Send:', commandeDataToSend);
@@ -190,6 +194,8 @@ const Page: React.FC = () => {
 
 
 
+
+
     const handlePrintPDF = () => {
         const doc = new jsPDF();
         const pageWidth = doc.internal.pageSize.getWidth();
@@ -197,104 +203,106 @@ const Page: React.FC = () => {
         const client = clientName || "Client Inconnu"; // Client name fallback in French
         const currentDate = new Date().toLocaleDateString();
 
-        // Title and address
-        doc.setFontSize(16);
-        doc.setTextColor(40);
-
-        const companyTitle = "SODEA";
-        const address = "Route de Mornag Km2 Khlédia 2054 Tunis";
-
-
-        // Header design with better alignment and padding
+        // Header Section
         doc.setFillColor(200, 200, 255); // Light blue background
-        doc.rect(0, 0, pageWidth, 40, "F"); // Full-width header
-        doc.setTextColor(0);
-        doc.setFont("helvetica", "bold");
-        doc.text(companyTitle, 14, 15);
-        doc.setFont("helvetica", "normal");
-        doc.text(address, 14, 25);
+        doc.rect(0, 0, pageWidth, 40, "F"); // Full-width header background
+        doc.setTextColor(0); // Set text color to black
 
-        // Title aligned to the right
+        // Company Title
         doc.setFont("helvetica", "bold");
         doc.setFontSize(16);
+        doc.text("SODEA", 14, 15); // Left-aligned company name
+
+        // Company Address
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(12);
+        doc.text("Route de Mornag Km2 Khlédia 2054 Tunis", 14, 25); // Left-aligned address
+
+        // Title "Facture de Service" centered
         const title = "Facture de Service";
-        const titleXPosition = pageWidth - doc.getTextWidth(title) - 20;
-        doc.text(title, titleXPosition, 35);
+        doc.setFontSize(22);
+        const titleXPosition = (pageWidth - doc.getTextWidth(title)) / 2; // Center the title
+        doc.text(title, titleXPosition, 35); // Positioned below the header
 
-        // Invoice details
-        doc.text(`Facture N°: ${invoiceNumber}`, 14, 50);
-        doc.text(`Nom agriculteur: ${client}`, 14, 60);
-        doc.text(`Date: ${currentDate}`, 14, 70);
+        // Invoice Details Section
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Facture N°: `, 14, 50); // Left-aligned invoice number
+        doc.text(`Nom agriculteur: ${client}`, 14, 60);   // Left-aligned client name
+        doc.text(`Date: ${currentDate}`, 14, 70);         // Left-aligned date
 
-        // Prepare table data
+        // Prepare table data and calculate totals
+        let totalCaisse = 0, totalBrut = 0, totalNet = 0, totalAmount = 0;
+
         const tableData = commandeData.map((data) => {
             const selectedType = typesDeDatte.find((type) => type.id === data.typeDeDatteId);
             const selectedCoffre = coffres.find((coffre) => coffre.id === data.coffreId);
             const unitPrice = selectedType?.prix || 0;
-            const brut = data.qty || 0; // Brut quantity
-            const net = brut - (data.quantiteCoffre * (selectedCoffre ? parseFloat(selectedCoffre.PoidsCoffre) : 0)); // Net quantity after subtracting caisse weight
+            const brut = parseFloat((Number(data.qty) || 0).toString()); // Brut quantity
+            const quantiteCoffre = Number(data.quantiteCoffre) || 0;
+            const net = parseFloat((brut - (quantiteCoffre * (selectedCoffre ? parseFloat(selectedCoffre.PoidsCoffre) : 0))).toFixed(2)); // Net quantity
+            const lineTotal = net * unitPrice; // Line total
 
-            // Ensure calculation of net * pricePerUnit
-            const lineTotal = net * unitPrice;
+            // Update totals
+            totalCaisse += quantiteCoffre;
+            totalBrut += brut;
+            totalNet += net;
+            totalAmount += lineTotal;
 
             return {
-                caisseNumber: data.quantiteCoffre || "N/A", // Caisse number
+                caisseNumber: quantiteCoffre || "N/A", // Caisse number
                 caisseType: selectedCoffre ? selectedCoffre.TypeCoffre : "Pas de Coffre", // Caisse type
-                type: selectedType?.name || "Inconnu", // Type of date
-                brut: brut, // Brut quantity including coffre
-                net: net, // Net quantity after subtracting caisse weight
-                pricePerUnit: unitPrice, // Unit price with 2 decimal places
-                lineTotal: lineTotal, // Line total (net * price per unit) with 2 decimal places
+                type: selectedType?.name || "Inconnu", // Date type
+                brut, // Brut quantity
+                net, // Net quantity
+                pricePerUnit: unitPrice, // Unit price
+                lineTotal: lineTotal, // Line total
             };
         });
 
-        // Calculate total based on net qty and unit price
-        const totalSum = tableData.reduce(
-            (total, item) => total + parseFloat(item.lineTotal),
-            0
-        ); // Total sum of all line totals, ensuring numeric addition
-
-        // Draw table
+        // Draw the table
         autoTable(doc, {
             head: [
                 [
                     "N° Caisse",
                     "Type de Caisse",
                     "Type de datte",
-                    "Quantité Brut(Kg)",
-                    "Quantité Net(Kg)",
+                    "Quantité Brut (Kg)",
+                    "Quantité Net (Kg)",
                     "Prix Unitaire",
                     "Total (TND)",
                 ],
-            ], // Add 'Total' column
+            ],
             body: tableData.map((item) => [
-                item.caisseNumber || "N/A",
-                item.caisseType || "N/A",
-                item.type || "Inconnu",
-                item.brut || 0, // Brut quantity (including coffre)
-                item.net || 0, // Net quantity
-                item.pricePerUnit || 0, // Unit price
-                item.lineTotal || 0, // Line total (net * price per unit)
+                item.caisseNumber,
+                item.caisseType,
+                item.type,
+                item.brut,
+                item.net,
+                item.pricePerUnit,
+                item.lineTotal,
             ]),
-            theme: "grid", // Use grid theme for better visibility
+            theme: "grid", // Grid theme for visibility
             styles: { fontSize: 10, cellPadding: 3 },
-            margin: { top: 80 }, // Add margin to avoid overlap with previous content
-            didDrawPage: () => {
-                const finalY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY : 0; // Fallback to 0 if undefined
-                const totalSumText = `Total: ${totalSum.toFixed(2)} TND`;
-                doc.text(totalSumText, 14, finalY + 10); // Valid x and y coordinates
-            },
+            margin: { top: 80 },
+            didDrawPage: (data) => {
+                const finalY = data.cursor.y || 0; // Position after table
 
+                // Print totals below the table
+                doc.setFont("helvetica", "bold");
+                doc.text(`Total Caisse: ${totalCaisse}`, 14, finalY + 10);
+                doc.text(`Total Brut: ${parseFloat(totalBrut.toFixed(2))} Kg`, 14, finalY + 20);
+                doc.text(`Total Net: ${parseFloat(totalNet.toFixed(2))} Kg`, 14, finalY + 30);
+                doc.text(`Montant Total: ${totalAmount.toFixed(2)} TND`, 14, finalY + 40);
+            },
         });
 
-        // Add text for total in words or any other footer information
-        doc.setFont("helvetica", "bold");
-        doc.text(`Total: ${totalSum.toFixed(2)} TND`, 14, (doc as any).lastAutoTable.finalY + 10);
-
-
-        // Save the PDF
-        doc.save(`Facture_${invoiceNumber}.pdf`); // Filename in French
+        // Save the PDF with invoice number in filename
+        doc.save(`Facture_${invoiceNumber}.pdf`);
     };
+
+
+
 
 
 
@@ -358,14 +366,6 @@ const Page: React.FC = () => {
                             type="number"
                             value={data.quantiteCoffre}
                             onChange={(e) => handleTypeChange(index, "quantiteCoffre", e.target.value)}
-                            fullWidth
-                        />
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                        <TextField
-                            label="السعر الإجمالي"
-                            value={totalPrix}
-                            disabled
                             fullWidth
                         />
                     </Grid>

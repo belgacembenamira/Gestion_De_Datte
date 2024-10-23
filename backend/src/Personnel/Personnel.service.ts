@@ -2,12 +2,12 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Commande } from 'src/Commande/Commande.entity';
-import { Logger } from '@nestjs/common'; // Import Logger
+import { Logger } from '@nestjs/common';
 import { Personnel } from './PersonneEntity.entity';
 
 @Injectable()
 export class PersonnelService {
-  private readonly logger = new Logger(PersonnelService.name); // Instance de Logger
+  private readonly logger = new Logger(PersonnelService.name);
 
   constructor(
     @InjectRepository(Personnel)
@@ -17,30 +17,26 @@ export class PersonnelService {
     private commandesRepository: Repository<Commande>,
   ) {}
 
-  // Retrieve all personnel with their commandes and coffres
+  // Retrieve all personnel
   async findAll(): Promise<Personnel[]> {
-    this.logger.log(
-      'Retrieving all personnel with their commandes and coffres.',
-    );
+    this.logger.log('Retrieving all personnel.');
     try {
-      const personnel = await this.personnelRepository.find({
-        relations: ['commandes'], // Relations à récupérer
-      });
+      const personnel: Personnel[] = await this.personnelRepository.find();
       this.logger.debug(`Found ${personnel.length} personnel.`);
       return personnel;
     } catch (error) {
       this.logger.error('Error retrieving personnel.', error.stack);
-      throw error;
+      throw new Error('Could not retrieve personnel. Please try again later.');
     }
   }
 
-  // Retrieve a personnel by ID with their commandes and coffres
-  async findOne(id: number): Promise<Personnel> {
+  // Retrieve a personnel by ID
+  async findOne(id: string): Promise<Personnel> {
     this.logger.log(`Retrieving personnel with ID ${id}.`);
     try {
       const personnel = await this.personnelRepository.findOne({
         where: { id: Number(id) },
-        relations: ['commandes'], // Relations associées
+        relations: ['commandes'], // Load related commandes
       });
 
       if (!personnel) {
@@ -59,35 +55,8 @@ export class PersonnelService {
     }
   }
 
-  // Create a new personnel with data validation
-  // Create a new personnel with data validation
-
-  // Retrieve all personnel with their associated commandes and coffre count
-  async findAllWithCommandesAndCoffres(): Promise<Personnel[]> {
-    return this.personnelRepository.find({
-      relations: ['commandes'], // Assuming these relations exist in the entity
-    });
-  }
-  async findAllPersonnelWithCommandes(): Promise<Personnel[]> {
-    this.logger.log('Retrieving all personnel with their commandes.');
-    try {
-      const personnel = await this.personnelRepository.find({
-        relations: ['commandes'], // Load related commandes
-      });
-
-      this.logger.debug(`Found ${personnel.length} personnel with commandes.`);
-      return personnel;
-    } catch (error) {
-      this.logger.error(
-        'Error retrieving personnel with commandes.',
-        error.stack,
-      );
-      throw new NotFoundException(
-        'Could not retrieve personnel with commandes.',
-      );
-    }
-  }
-  async create(personnelData: Partial<Personnel>): Promise<Personnel> {
+  // Create a new personnel
+  async create(personnelData: Personnel): Promise<Personnel> {
     this.logger.log('Creating a new personnel.');
     try {
       const personnel = this.personnelRepository.create(personnelData);
@@ -100,9 +69,9 @@ export class PersonnelService {
     }
   }
 
-  // Update personnel data with error handling
+  // Update personnel data
   async update(
-    id: number,
+    id: string,
     updatePersonnelData: Partial<Personnel>,
   ): Promise<Personnel> {
     this.logger.log(`Updating personnel with ID ${id}.`);
@@ -125,8 +94,8 @@ export class PersonnelService {
     }
   }
 
-  // Delete a personnel and log the operation
-  async remove(id: number): Promise<void> {
+  // Delete a personnel
+  async remove(id: string): Promise<void> {
     this.logger.log(`Deleting personnel with ID ${id}.`);
     try {
       const personnel = await this.personnelRepository.findOne({
@@ -144,7 +113,7 @@ export class PersonnelService {
     }
   }
 
-  // Search personnel by name with enhanced logging
+  // Search personnel by name
   async findByName(name: string): Promise<Personnel[]> {
     this.logger.log(`Searching for personnel with name like ${name}.`);
     try {
@@ -163,35 +132,33 @@ export class PersonnelService {
     }
   }
 
-  // Get all commandes related to a specific personnel
-  // async findAllCommandesByPersonnel(id : number): Promise<Commande[]> {
-  //   this.logger.log(`Retrieving all commandes for personnel with ID ${id}.`);
-  //   try {
-  //     const personnel = await this.personnelRepository.findOne({
-  //       where: { id },
-  //       relations: ['commandes'],
-  //     });
+  // Retrieve all personnel with their associated commandes
+  async findAllWithCommandes(): Promise<Personnel[]> {
+    this.logger.log('Retrieving all personnel with their commandes.');
+    try {
+      const personnel = await this.personnelRepository.find({
+        relations: ['commandes'], // Load related commandes
+      });
 
-  //     if (!personnel) {
-  //       this.logger.warn(`Personnel with ID ${id} not found.`);
-  //       throw new NotFoundException(`Personnel with ID ${id} not found`);
-  //     }
+      this.logger.debug(`Found ${personnel.length} personnel with commandes.`);
+      return personnel;
+    } catch (error) {
+      this.logger.error(
+        'Error retrieving personnel with commandes.',
+        error.stack,
+      );
+      throw new NotFoundException(
+        'Could not retrieve personnel with commandes.',
+      );
+    }
+  }
 
-  //     const commandes = await this.commandesRepository.find({
-  //       where: { personnel: { id } }, // Assuming correct relation in Commande entity
-  //       relations: ['client'], // Adjust relations as needed
-  //     });
+  // Add this method if it exists in your controller
+  async findAllWithCommandesAndCoffres(): Promise<Personnel[]> {
+    this.logger.log('Retrieving all personnel with commandes and coffres.');
+    // Logic to retrieve personnel with commandes and coffres goes here
+    return this.findAllWithCommandes(); // Placeholder, replace with actual logic
+  }
 
-  //     this.logger.debug(
-  //       `Found ${commandes.length} commandes for personnel with ID ${id}.`,
-  //     );
-  //     return commandes;
-  //   } catch (error) {
-  //     this.logger.error(
-  //       `Error retrieving commandes for personnel with ID ${id}.`,
-  //       error.stack,
-  //     );
-  //     throw error;
-  //   }
-  // }
+  // Add other methods as needed...
 }
