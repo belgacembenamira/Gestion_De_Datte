@@ -2,9 +2,7 @@ import axios from "axios";
 
 export const fetchPersonnelIdByName = async (name: string) => {
   try {
-    const response = await axios.get(
-      `http://localhost:5000/personnels/search/${name}`
-    );
+    const response = await axios.get(`http://localhost:5000/personnels/}`);
 
     console.log("Réponse de l'API:", response.data);
 

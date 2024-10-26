@@ -6,9 +6,18 @@ import { CommandeModule } from 'src/Commande/Commande.module'; // Make sure Comm
 import { Commande } from 'src/Commande/Commande.entity';
 import { Coffre } from 'src/Coffre/Coffre.entity';
 import { Personnel } from './PersonneEntity.entity';
+import { CommandePersonnelle } from 'src/CommandePersonnelle/CommandePersonnelle.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Personnel, Commande, Coffre])],
+  imports: [
+    TypeOrmModule.forFeature([
+      Personnel,
+      Commande,
+      Coffre,
+
+      CommandePersonnelle,
+    ]), // Make sure Commande is included if needed
+  ],
   providers: [PersonnelService],
   controllers: [PersonnelController],
 })

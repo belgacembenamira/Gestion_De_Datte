@@ -58,12 +58,12 @@ export class PersonnelController {
     return this.personnelService.findByName(name);
   }
 
-
   // Get all personnel with commandes
   @Get('/with-commandes')
   async getAllPersonnelWithCommandes(@Res() res) {
     try {
-      const personnelWithCommandes = await this.personnelService.findAllWithCommandes();
+      const personnelWithCommandes =
+        await this.personnelService.findAllWithCommandes();
       return res.status(HttpStatus.OK).json(personnelWithCommandes);
     } catch (error) {
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({

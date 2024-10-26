@@ -15,8 +15,8 @@ import { Personnel } from 'src/Personnel/PersonneEntity.entity';
       Client,
       Coffre,
       TypeDeDatteQuantity,
-      // Uncomment if needed
       Personnel,
+      // Uncomment if needed
     ]),
   ],
   controllers: [CommandeController],

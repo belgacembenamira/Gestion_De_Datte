@@ -30,20 +30,17 @@ interface typeDeDatteQuantities {
     typeDeDatteName: string;
 }
 
-interface CommandeData {
-    typeDeDatteId: number;
-    typeDeDatteName: string;
-    qty: number;
-    prix: number;
-    coffreId: string;
-    quantiteCoffre: number;
-    brut?: number;
-    typeDeDatteQuantities: typeDeDatteQuantities[];
-    personnel: {
-        id: number; // or string based on your API response
-        name: string;
-    };
-    date?: string; // Added date property
+export interface CommandeData {
+    id: number;
+    date?: string; // optional since it's nullable
+    prix?: number; // optional since it's nullable
+    personnelsName?: string; // optional since it's nullable
+    quantitynet?: number; // optional since it's nullable
+    quantitybrut?: number; // optional since it's nullable
+    numberDeCoffre?: string; // optional since it's nullable
+    typeDeDatteName?: string; // optional since it's nullable
+    prixUnitaireDeDatte?: number; // optional since it's nullable
+    coffre?: Coffre; // nullable ManyToOne relation
 }
 
 interface Coffre {
@@ -308,49 +305,36 @@ const Page: React.FC = () => {
 
         try {
             // Attempt to fetch personnel ID by name
-            personnelId = await fetchPersonnelIdByName(personnelName); // Corrected variable name
-            console.log('Fetched personnel ID:', personnelId);
-
-            // If personnel ID is not found, create a new personnel
-            if (!personnelId) {
-                const response = await axios.post('http://localhost:5000/personnels/create', { name: personnelName });
-                personnelId = response.data.id;
-                console.log('Created new personnel, ID:', personnelId);
+            if (personnelName) {
+                const personnelResponse = await fetchPersonnelIdByName(personnelName);
+                personnelId = personnelResponse?.data?.id;
             }
 
-            // Map commandeData to typeDeDatteQuantities
-            const typeDeDatteQuantities = commandeData.map(data => ({
-                typeDeDatteName: data.typeDeDatteName,
-                quantity: data.brut ?? 0, // Use brut for quantities
-                numberDeCoffre: data.quantiteCoffre ?? 0, // Send number of Coffres
-            })).filter(item => item.quantity > 0);
-
-            console.log('Type de Datte Quantities:', JSON.stringify(typeDeDatteQuantities, null, 2));
-
-            // Prepare commande data to send
-            const commandeDataToSend = {
-                date: new Date().toISOString().split('T')[0],
-                qty: totalQty,
+            // Form data to be submitted
+            const dataToSubmit = {
+                date: new Date().toISOString(),
                 prix: totalPrix,
-                personnel: { id: personnelId }, // Use personnelId
-                coffres: commandeData.map(data => ({
-                    id: data.coffreId,
-                    quantity: data.quantiteCoffre,
-                })), // Include type and quantity
-                typeDeDatteQuantities,
+                personnelsName: personnelName,
+                personnelId,
+                typeDeDatteQuantities: commandeData.map(item => ({
+                    typeDeDatteId: item.typeDeDatteId,
+                    quantite: item.qty,
+                    prix: item.prix,
+                    numberDeCoffre: item.quantiteCoffre,
+                    coffreId: item.coffreId
+                }))
             };
 
-            console.log('Final Commande Data to Send:', JSON.stringify(commandeDataToSend, null, 2));
-
-            // Send the order data
-            await axios.post('http://localhost:5000/commandes/createP', commandeDataToSend);
-            console.log('Commande submitted successfully');
-            Swal.fire({ title: 'Succès', text: 'Commande créée avec succès!', icon: 'success' });
+            // Submit the order data
+            const response = await axios.post('http://localhost:5000/commandePersonnelles/', dataToSubmit);
+            console.log('Order successfully submitted:', response.data);
+            Swal.fire({ title: 'Success', text: 'Order submitted successfully!', icon: 'success' });
         } catch (error) {
-            console.error('Error during order submission:', error);
-            Swal.fire({ title: 'Erreur', text: 'Erreur lors de la soumission de la commande!', icon: 'error' });
+            console.error('Error during submission:', error);
+            Swal.fire({ title: 'Error', text: 'Failed to submit order!', icon: 'error' });
         }
     };
+
 
 
 
@@ -470,13 +454,10 @@ const Page: React.FC = () => {
             ))}
 
             {/* Total Price */}
-            <Typography variant="h6" gutterBottom>
-                السعر الإجمالي: {totalPrix} TND
-            </Typography>
 
             {/* Submit */}
             <Button variant="contained" onClick={handleAddType}>إضافة نوع</Button>
-            <Button variant="contained" onClick={handleSubmit}>إرسال</Button>
+            {/* <Button variant="contained" onClick={handleSubmit}>إرسال</Button> */}
             <Button variant="contained" onClick={handlePrintPDFPersonnel}>pdf</Button>
 
         </Container>

@@ -6,9 +6,18 @@ import { CoffresController } from './Coffre.controller';
 import { Personnel } from 'src/Personnel/PersonneEntity.entity';
 import { Client } from 'src/Client/Client.entity';
 import { Commande } from 'src/Commande/Commande.entity';
+import { CommandePersonnelle } from 'src/CommandePersonnelle/CommandePersonnelle.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Coffre, Commande, Personnel, Client])],
+  imports: [
+    TypeOrmModule.forFeature([
+      Coffre,
+      Commande,
+      Personnel,
+      CommandePersonnelle,
+      Client,
+    ]),
+  ],
   providers: [CoffresService],
   controllers: [CoffresController],
 })

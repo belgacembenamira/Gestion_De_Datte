@@ -87,32 +87,12 @@ const TableRowComponent: React.FC<TableRowComponentProps> = memo(({ commande, on
             </TableCell>
 
             <TableCell>
-                <Tooltip title="تعديل">
-                    <IconButton onClick={onEdit}>
-                        <Edit />
-                    </IconButton>
-                </Tooltip>
                 <Tooltip title="حذف">
                     <IconButton onClick={onDelete}>
                         <Delete />
                     </IconButton>
                 </Tooltip>
-                <Tooltip title="توليد PDF">
-                    <IconButton
-                        onClick={() => {
-                            generateInvoicePDF(
-                                commande.client?.name || "غير متوفر",
-                                uniqueTypeDeDatteQuantities,
-                                commande.coffres,
-                                commande.date,
-                                commande.prix,
-                                commande.id
-                            );
-                        }}
-                    >
-                        <Typography variant="caption">PDF</Typography>
-                    </IconButton>
-                </Tooltip>
+
             </TableCell>
         </TableRow>
     );

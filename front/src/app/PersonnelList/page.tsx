@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import {
@@ -21,32 +21,24 @@ const Page = () => {
     interface Item {
         id: number;
         date: string;
-        qty: number;
-        personnel?: {
-            name: string;
-        };
-        typeDeDatteQuantities: {
-            id: number;
-            typeDeDatteName: string;
-            quantity: number;
-        }[];
-        coffres: {
-            id: number;
-            numberDeCoffre: string;
-            TypeCoffre: string;
-            PoidsCoffre: string;
-        }[];
+        prix: string; // Price field from JSON
+        personnelsName?: string | null; // Personnel name can be null
+        quantitynet?: string | null; // Quantity net can be null
+        quantitybrut?: string | null; // Quantity brut can be null
+        numberDeCoffre?: string | null; // Number of coffres can be null
+        typeDeDatteName?: string | null; // Type de datte can be null
+        prixUnitaireDeDatte?: string | null; // Price per unit of datte can be null
     }
 
     const [items, setItems] = useState<Item[]>([]);
     const [totalQuantity, setTotalQuantity] = useState(0);
-    const [clientName, setClientName] = useState(''); // New state for client search
+    const [clientName, setClientName] = useState(''); // State for client search
     const [filteredItems, setFilteredItems] = useState<Item[]>([]); // For filtered items based on search
 
     useEffect(() => {
         const fetchItems = async () => {
             try {
-                const response = await axios.get('http://localhost:5000/commandes/findAllPersonnel');
+                const response = await axios.get('http://localhost:5000/commandePersonnelles/');
                 setItems(response.data); // Assuming response.data is an array of items
                 setFilteredItems(response.data); // Set initially to show all items
                 calculateTotalQuantity(response.data);
@@ -59,24 +51,24 @@ const Page = () => {
     }, []);
 
     const calculateTotalQuantity = (itemsData: Item[]) => {
-        const total = itemsData.reduce((acc, item) => acc + (item.qty || 0), 0);
+        // Using quantitynet to calculate total quantity
+        const total = itemsData.reduce((acc, item) => acc + (parseFloat(item.quantitynet || "0") || 0), 0);
         setTotalQuantity(total);
     };
 
     const handleSearch = () => {
         const filtered = items.filter((item) =>
-            item.personnel?.name?.toLowerCase().includes(clientName.toLowerCase())
+            item.personnelsName?.toLowerCase().includes(clientName.toLowerCase()) // Use personnelsName for filtering
         );
         setFilteredItems(filtered);
         calculateTotalQuantity(filtered); // Recalculate total quantity for filtered items
     };
-
     const handlePrintPDF = () => {
         const doc = new jsPDF();
         const pageWidth = doc.internal.pageSize.getWidth();
         const invoiceNumber = Math.floor(1000 + Math.random() * 9000);
         const client = clientName || "Client Inconnu"; // Fallback for client name
-        const currentDate = new Date().toLocaleDateString();
+        const currentDate = new Date().toLocaleDateString('fr-FR'); // Set locale to French
 
         // Title and address
         doc.setFontSize(16);
@@ -101,59 +93,72 @@ const Page = () => {
         // Invoice details
         doc.setFont("helvetica", "normal");
         doc.text(`Facture N°: ${invoiceNumber}`, 14, 50);
-        doc.text(`Nom  Fourniseur: ${client}`, 14, 60);
+        doc.text(`Nom du Fournisseur: ${client}`, 14, 60);
         doc.text(`Date: ${currentDate}`, 14, 70);
 
-        // Filter commandes for the searched client
-        const clientOrders = filteredItems.filter(commande =>
-            commande.personnel?.name?.toLowerCase().includes(clientName.toLowerCase())
-        );
+        // Prepare the table data from filtered items
+        const tableData = filteredItems.map(item => {
+            return [
+                item.date,
+                item.quantitynet || 'N/A', // Show 'N/A' if quantitynet is null
+                item.personnelsName || 'غير متوفر', // Show 'غير متوفر' if personnel name is null
+                item.typeDeDatteName || 'غير متوفر', // Type de datte, handle null
+                item.numberDeCoffre || 'غير متوفر', // Handle null for numberDeCoffre
+                item.prix || 'N/A' // Show price, handle null
+            ];
+        });
 
-        if (clientOrders.length === 0) {
-            doc.text("Aucune commande trouvée pour ce client.", 14, 80);
-            doc.save(`${client}-facture.pdf`);
-            return;
-        }
-
-        // Prepare the table data with grouped columns and proper calculations
-        const tableData = clientOrders.flatMap(commande =>
-            commande.typeDeDatteQuantities.map(item => {
-                const qty = item.quantity; // Quantité nette
-                const nbreCoffres = commande.coffres.length; // Total number of coffres
-
-                // Calculate the brut quantity (net + total weight of coffres)
-                const poidsCoffre = commande.coffres.reduce((sum, coffre) => sum + parseFloat(coffre.PoidsCoffre), 0); // Total Poids des coffres
-                const qtyBrut = qty + poidsCoffre; // Quantité brute = net + poids total des coffres
-
-                // Details of the coffres
-                const coffreDetails = commande.coffres.map(coffre => `${coffre.TypeCoffre} (${coffre.PoidsCoffre} kg)`).join(", ");
-
-                return {
-                    typeCoffre: coffreDetails,
-                    nbreCoffres,
-                    typeDeDatteName: item.typeDeDatteName,
-                    qty, // Quantité nette
-                    qtyBrut, // Quantité brute (net + poids des coffres)
-                };
-            })
-        );
-
-        // Draw table
+        // Draw first table
         autoTable(doc, {
-            head: [['Type de Caisse', 'N° de Caisses', 'Type de Datte', 'Quantité nette', 'Quantité brute']],
-            body: tableData.map(item => [
-                item.typeCoffre,
-                item.nbreCoffres,
-                item.typeDeDatteName,
-                item.qty,
-                item.qtyBrut, // Show two decimal places for qtyBrut
-            ]),
+            head: [['Date', 'Quantité nette', 'Nom de l\'employé', 'Type de datte', 'Nombre de coffres', 'Prix']],
+            body: tableData,
             startY: 80,
+        });
+
+        // Summary calculations
+        const summary = {};
+
+        filteredItems.forEach(item => {
+            const key = `${item.typeDeDatteName || 'غير متوفر'}-${item.numberDeCoffre || 'غير متوفر'}`;
+
+            if (!summary[key]) {
+                summary[key] = {
+                    totalQuantityBrut: 0,
+                    totalQuantityNet: 0,
+                    totalPrix: 0,
+                    typeDeDatte: item.typeDeDatteName || 'غير متوفر',
+                    numberDeCoffre: item.numberDeCoffre || 'غير متوفر',
+                };
+            }
+
+            summary[key].totalQuantityBrut += item.quantitybrut || 0; // Ensure quantitybrut is handled
+            summary[key].totalQuantityNet += item.quantitynet || 0; // Ensure quantitynet is handled
+            summary[key].totalPrix += item.prix || 0; // Ensure price is handled
+        });
+
+        const summaryData = Object.values(summary).map(item => [
+            item.typeDeDatte,
+            item.numberDeCoffre,
+            item.totalQuantityBrut,
+            item.totalQuantityNet,
+            item.totalPrix
+        ]);
+
+        // Draw summary table
+        doc.setFont("helvetica", "bold");
+        const summaryTitleY = doc.autoTable.previous.finalY + 10; // Positioning for the summary table title
+        doc.text("Résumé par Type de Datte", 14, summaryTitleY);
+
+        autoTable(doc, {
+            head: [['Type de Datte', 'Nombre de Coffres', 'Total Brut', 'Total Net', 'Total Prix']],
+            body: summaryData,
+            startY: summaryTitleY + 10,
         });
 
         // Save the PDF
         doc.save(`${client}-facture.pdf`);
     };
+
 
     return (
         <Box sx={{ padding: 2 }}>
@@ -183,36 +188,18 @@ const Page = () => {
                             <TableCell>اسم الموظف</TableCell>
                             <TableCell>نوع التمر</TableCell>
                             <TableCell>عدد الصناديق</TableCell>
-                            <TableCell>نوع الصندوق</TableCell>
+                            <TableCell>السعر</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {filteredItems.map((item) => (
                             <TableRow key={item.id}>
                                 <TableCell>{item.date}</TableCell>
-                                <TableCell>{item.qty}</TableCell>
-                                <TableCell>{item.personnel ? item.personnel.name : 'غير متوفر'}</TableCell>
-                                <TableCell>
-                                    {item.typeDeDatteQuantities.map((type) => (
-                                        <div key={type.id}>
-                                            {type.typeDeDatteName} (الكمية: {type.quantity})
-                                        </div>
-                                    ))}
-                                </TableCell>
-                                <TableCell>
-                                    {item.coffres.map((coffre) => (
-                                        <div key={coffre.id}>
-                                            {coffre.numberDeCoffre}
-                                        </div>
-                                    ))}
-                                </TableCell>
-                                <TableCell>
-                                    {item.coffres.map((coffre) => (
-                                        <div key={coffre.id}>
-                                            {coffre.TypeCoffre}
-                                        </div>
-                                    ))}
-                                </TableCell>
+                                <TableCell>{item.quantitynet || 'N/A'}</TableCell>
+                                <TableCell>{item.personnelsName || 'غير متوفر'}</TableCell>
+                                <TableCell>{item.typeDeDatteName || 'غير متوفر'}</TableCell>
+                                <TableCell>{item.numberDeCoffre || 'غير متوفر'}</TableCell>
+                                <TableCell>{item.prix || 'N/A'}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>

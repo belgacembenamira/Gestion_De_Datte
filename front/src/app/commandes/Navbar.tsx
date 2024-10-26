@@ -136,7 +136,7 @@ const Navbar: React.FC = () => {
               },
             }}
           >
-            إنشاء طلب خراص
+            Fournsieur  إنشاء طلب خراص
           </Button>
 
           <Button
@@ -175,7 +175,7 @@ const Navbar: React.FC = () => {
           {/* New Button for الخراص liste */}
           <Button
             component={Link}
-            href="/PersonnelList"
+            href="/ListeF"
             color="inherit"
             sx={{
               fontWeight: "bold",
@@ -186,8 +186,37 @@ const Navbar: React.FC = () => {
               },
             }}
           >
-            الخراص liste
+            liste camion fournisuer
           </Button>
+          <Button
+            component={Link}
+            href="/ListeP"
+            color="inherit"
+            sx={{
+              fontWeight: "bold",
+              textTransform: "none",
+              fontSize: "16px",
+              "&:hover": {
+                backgroundColor: "rgba(255, 255, 255, 0.2)",
+              },
+            }}
+          >
+            liste camion Taher
+          </Button>
+          <Button
+            component={Link}
+            href="/Form"
+            color="inherit"
+            sx={{
+              fontWeight: "bold",
+              textTransform: "none",
+              fontSize: "16px",
+              "&:hover": {
+                backgroundColor: "rgba(255, 255, 255, 0.2)",
+              },
+            }}
+          >
+            From taher ajel           </Button>
         </Box>
       </Toolbar>
     </AppBar>

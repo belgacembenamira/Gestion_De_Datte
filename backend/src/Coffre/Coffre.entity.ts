@@ -1,5 +1,6 @@
 import { Client } from 'src/Client/Client.entity';
 import { Commande } from 'src/Commande/Commande.entity';
+import { CommandePersonnelle } from 'src/CommandePersonnelle/CommandePersonnelle.entity';
 import { Personnel } from 'src/Personnel/PersonneEntity.entity';
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
 
@@ -26,4 +27,10 @@ export class Coffre {
     nullable: true,
   }) // Making the relationship nullable
   Personnel: Personnel;
+  @ManyToOne(
+    () => CommandePersonnelle,
+    (commandePersonnelle) => commandePersonnelle.coffre,
+    { nullable: true }, // Making the relationship nullable
+  )
+  CommandePersonnelle: CommandePersonnelle;
 }

@@ -1,5 +1,6 @@
 import { Client } from 'src/Client/Client.entity';
 import { TypeDeDatteQuantity } from 'src/Commande/type-de-datte-quantity.entity';
+import { TypeDeDatteQuantityPersonnelle } from 'src/CommandePersonnelle/TypeDeDatteQuantityPersonnelle.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -25,6 +26,7 @@ export class TypeDeDatte {
   @ManyToOne(() => Client, (client) => client.TypeDeDatte)
   client: Client;
   typeDeDatteQuantities: TypeDeDatteQuantity[]; // Ensure thi
+  typeDeDatteQuantitiesPersonnelle: TypeDeDatteQuantityPersonnelle[]; // Ensure thi
   // @OneToMany(
   //   () => TypeDeDatteQuantity,
   //   (typeDeDatteQuantity) => typeDeDatteQuantity.typeDeDatte,

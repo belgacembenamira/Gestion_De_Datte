@@ -25,7 +25,7 @@ interface CommandeData {
     typeDeDatteName: string;
     qty: number; // This is the brut quantity
     coffreId: string;
-    quantiteCoffre: number; // Quantity in the box
+    nbreCaisse: number; // Quantity in the box
     coffrePoids?: number; // Weight of the box
     nbreCaisse: number; // Number of boxes
 }
@@ -88,7 +88,7 @@ const Page: React.FC = () => {
             typeDeDatteName: "",
             qty: 0,
             coffreId: "",
-            quantiteCoffre: 0,
+            nbreCaisse: 0,
             coffrePoids: 0,
             nbreCaisse: 0, // Initialize number of boxes
         }]);
@@ -97,107 +97,141 @@ const Page: React.FC = () => {
     const handlePrintPDF = () => {
         const doc = new jsPDF();
         const pageWidth = doc.internal.pageSize.getWidth();
-
         const invoiceNumber = Math.floor(1000 + Math.random() * 9000);
+        const client = clientName;
         const currentDate = new Date().toLocaleDateString();
 
-        // Set up document header
-        doc.setFontSize(18);
-        doc.setTextColor(30);
+        // Titre et adresse
+        doc.setFontSize(16);
+        doc.setTextColor(40);
 
-        const companyTitle = "SODEA ";
+        const companyTitle = "SODEA";
+        const address = "Route de Mornag Km2 Khlédia 2054 ,Ben Arous";
+
+        // En-tête de page
         doc.setFillColor(200, 200, 255);
-        doc.rect(0, 0, pageWidth, 40, 'F');
+        doc.rect(0, 0, pageWidth, 40, "F");
         doc.setTextColor(0);
         doc.setFont("helvetica", "bold");
-        doc.text(companyTitle, 14, 15);
-        doc.setFont("helvetica", "normal");
+        doc.text(companyTitle, 20, 25);
 
-        // Title
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(16);
-        const title = "Facture";
-        const titleXPosition = pageWidth - doc.getTextWidth(title) - 20;
-        doc.text(title, titleXPosition, 35);
-
-        // Invoice details
-        doc.setFont("helvetica", "normal");
+        // Détails de la facture
         doc.setFontSize(12);
-        doc.text(`Facture N°: ${invoiceNumber}`, 14, 50);
-        doc.text(`Fournisseur: ${clientName}`, 14, 55);
-        doc.text(`Date: ${currentDate}`, 14, 60);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Facture N°:`, 14, 50);
+        doc.text(`Nom Fournisseur: ${client}`, 14, 60);
+        doc.text(`Date: ${currentDate}`, 14, 70);
+        doc.text("Doté à SODEA", 14, 80);
+        doc.text(address, 14, 90);
 
-        // Additional information
-        doc.text("Doté à SODEA", 14, 65);
-        doc.text("Adresse de Récepteur: Route de morneg km 02 khelidia,Ben Arous", 14, 70);
+        // Table des données principales
+        let totalCaisse = 0;
+        let totalBrut = 0;
+        let totalNet = 0;
 
-        // Process table data
         const tableData = commandeData.map((data) => {
-            const selectedType = typesDeDatte.find(type => type.id === data.typeDeDatteId);
-            const selectedCoffre = coffres.find(coffre => coffre.id === data.coffreId);
+            const selectedType = typesDeDatte.find((type) => type.id === data.typeDeDatteId);
+            const selectedCoffre = coffres.find((coffre) => coffre.id === data.coffreId);
 
-            const brutQty = data.qty || 0; // Using qty as brut
-            const coffreWeight = selectedCoffre ? Number(selectedCoffre.PoidsCoffre) : 0;
-            const nbreCaisse = data.nbreCaisse || 0;
+            const brut = parseFloat(data.qty) || 0;
+            const net = brut - (parseFloat(data.nbreCaisse) * (selectedCoffre ? parseFloat(selectedCoffre.PoidsCoffre) : 0));
 
-            const netQty = brutQty - (coffreWeight * nbreCaisse); // Calculate net quantity
+            totalCaisse += parseFloat(data.nbreCaisse) || 0;
+            totalBrut += brut;
+            totalNet += net;
 
             return {
-                numberOfBoxes: nbreCaisse || 0,
-                boxType: selectedCoffre?.TypeCoffre || "Pas de Coffre",
+                caisseNumber: parseFloat(data.nbreCaisse) || "N/A",
+                caisseType: selectedCoffre ? selectedCoffre.TypeCoffre : "Pas de Coffre",
                 type: selectedType?.name || "Inconnu",
-                qtyBrut: brutQty,
-                qtyNet: netQty,
+                brut: brut,
+                net: net,
             };
         });
 
-        // Calculate total net quantity
-        const totalQtyNet = tableData.reduce((sum, item) => sum + (Number(item.qtyNet) || 0), 0);
-
-        // Generate the table for commande data
+        // Affichage de la table principale
         autoTable(doc, {
-            startY: 80, // Starting position for the table
-            head: [['Nombre de Caisse', 'Type de Caisse', 'Type de Datte', 'Quantité brut (Kg)', 'Quantité net (Kg)']],
-            body: tableData.map((row) => [
-                row.numberOfBoxes,
-                row.boxType,
-                row.type,
-                row.qtyBrut,
-                row.qtyNet,
+            head: [["N° Caisse", "Type de Caisse", "Type de datte", "Quantité Brut (Kg)", "Quantité Net (Kg)"]],
+            body: tableData.map((item) => [
+                item.caisseNumber || "N/A",
+                item.caisseType || "N/A",
+                item.type || "Inconnu",
+                item.brut.toFixed(2),
+                item.net.toFixed(2),
             ]),
-            styles: {
-                fontSize: 10,
-                cellPadding: 3,
-                overflow: 'linebreak',
-                lineWidth: 0.1,
-                fillColor: [240, 240, 240],
-                textColor: [0, 0, 0],
-                halign: 'center',
-            },
-            headStyles: {
-                fillColor: [100, 100, 255],
-                textColor: [255, 255, 255],
-                fontSize: 12,
-            },
-            theme: 'striped',
+            theme: "grid",
+            styles: { fontSize: 10, cellPadding: 3 },
+            margin: { top: 100 },
         });
 
-        // Adding total net quantity statement
-        const finalY = (doc as any).lastAutoTable.finalY || 140;
+        // Préparation des totaux pour le résumé
+        const summaryData = {};
+        commandeData.forEach((data) => {
+            const selectedType = typesDeDatte.find((type) => type.id === data.typeDeDatteId);
+            if (selectedType) {
+                const typeName = selectedType.name;
+                if (!summaryData[typeName]) {
+                    summaryData[typeName] = { totalCaisse: 0, totalBrut: 0, totalNet: 0 };
+                }
+                summaryData[typeName].totalCaisse += parseFloat(data.nbreCaisse) || 0;
+                summaryData[typeName].totalBrut += parseFloat(data.qty) || 0;
+                summaryData[typeName].totalNet += summaryData[typeName].totalBrut - (parseFloat(data.nbreCaisse) * (coffres.find(c => c.id === data.coffreId)?.PoidsCoffre || 0));
+            }
+        });
+
+        const summaryTableData = Object.keys(summaryData).map(type => {
+            return [
+                summaryData[type].totalCaisse,
+                type,
+                summaryData[type].totalBrut.toFixed(2),
+                summaryData[type].totalNet.toFixed(2),
+            ];
+        });
+
+        // Affichage de la table de résumé
+        const summaryTableHeader = ["Total Caisse", "Type de Datte", "Total Quantité Brut (Kg)", "Total Quantité Net (Kg)"];
+        const summaryTableY = doc.autoTable.previous.finalY + 10;
+
+        autoTable(doc, {
+            head: [summaryTableHeader],
+            body: summaryTableData,
+            theme: "grid",
+            styles: { fontSize: 10, cellPadding: 3 },
+            margin: { top: summaryTableY },
+        });
+
+        // Positionner les totaux
+        const finalY = doc.autoTable.previous.finalY;
         doc.setFont("helvetica", "normal");
         doc.setFontSize(12);
-        doc.text(`Après la présentation de facture, la somme de la quantité nette totale est de : ${totalQtyNet.toFixed(2)} Kg`, 14, finalY + 20);
 
-        // Footer with signatures
-        const footerY = finalY + 30;
+        const totalBrutTons = (totalBrut / 1000).toFixed(2);
+        const totalNetTons = (totalNet / 1000).toFixed(2);
+
+        doc.text(`Total Caisse: ${totalCaisse}`, 14, finalY + 10);
+        doc.text(`Total Quantité Brut: ${totalBrut} Kg (${totalBrutTons} Tonnes)`, 14, finalY + 20);
+        doc.text(`Total Quantité Net: ${totalNet} Kg (${totalNetTons} Tonnes)`, 14, finalY + 30);
+
+        doc.setFont("helvetica", "italic");
+        doc.text(`Après la présentation de facture, la somme de qty totale est de :  ${totalNet} Kg`, 14, finalY + 50);
+        doc.text("Merci pour votre collaboration", 14, finalY + 60);
+
+        const footerY = finalY + 80;
         doc.setFont("helvetica", "normal");
         doc.setFontSize(12);
-        doc.text("Signature & cache fournisseur", pageWidth - 60, footerY, { align: "right" }); // Right side
-        doc.text("Signature & cache Récepteur", 14, footerY); // Left side
+        doc.text("Signature & cache fournisseur", pageWidth - 60, footerY, { align: "right" });
+        doc.text("Signature & cache Récepteur", 14, footerY);
 
-        // Save PDF
         doc.save(`Facture_Personnel_${invoiceNumber}.pdf`);
     };
+
+
+
+
+
+
+
+
 
 
 

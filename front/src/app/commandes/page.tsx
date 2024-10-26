@@ -234,10 +234,10 @@ const Page: React.FC = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>ID</TableCell>
                 <TableCell>Client</TableCell>
                 <TableCell>Date</TableCell>
-                <TableCell>Prix (TND)</TableCell>
+                <TableCell>Desciption</TableCell>
+
                 <TableCell>Actions</TableCell>
               </TableRow>
             </TableHead>
